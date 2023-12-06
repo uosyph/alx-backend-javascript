@@ -6,17 +6,17 @@ interface Student {
 }
 
 const studentZero: Student = {
-	firstName: 'Syd',
-	lastName: 'Barrett',
-	age: 60,
-	location: 'Cambridge'
+	firstName: 'Socrates',
+	lastName: 'Plato',
+	age: 35,
+	location: 'Athens'
 };
 
 const studentOne: Student = {
-	firstName: 'Will',
-	lastName: 'Oldham',
-	age: 51,
-	location: 'Louisville'
+	firstName: 'Aristotle',
+	lastName: 'Kant',
+	age: 40,
+	location: 'Vienna'
 };
 
 const studentsList = [studentZero, studentOne];
@@ -34,8 +34,8 @@ tableHeadOne.innerHTML = ("<b>Location</b>");
 const body: HTMLTableSectionElement = table.createTBody();
 studentsList.map((student) => {
 	const newRow: HTMLTableRowElement = body.insertRow();
-	const nameRow: HTMLTableCellElement = newRow.insertCell();
+	const firstNameRow: HTMLTableCellElement = newRow.insertCell();
 	const locationRow: HTMLTableCellElement = newRow.insertCell();
-	nameRow.innerHTML = student.firstName;
+	firstNameRow.innerHTML = student.firstName;
 	locationRow.innerHTML = student.location;
 });
