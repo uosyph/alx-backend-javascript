@@ -1,32 +1,36 @@
-const fs = require('fs');
+import fs from 'fs';
 
-async function countStudents(path) {
-  let data;
-  try {
-    data = await fs.promises.readFile(path, 'utf8');
-  } catch (error) {
-    throw new Error('Cannot load the database');
+const readDatabase = (dataPath) => new Promise((resolve, reject) => {
+  if (!dataPath) {
+    reject(new Error('Cannot load the database'));
   }
-  const students = data.split('\r\n').slice(1)
-    .map((student) => student.split(','))
-    .map((student) => ({
-      firstName: student[0],
-      lastName: student[1],
-      age: student[2],
-      field: student[3],
-    }));
+  if (dataPath) {
+    fs.readFile(dataPath, (err, data) => {
+      if (err) {
+        reject(new Error('Cannot load the database'));
+      }
+      if (data) {
+        const lines = data.toString('utf-8').trim().split('\n');
+        const studentGroups = {};
+        const fields = lines[0].split(',');
+        const studentPropNames = fields.slice(0, fields.length - 1);
 
-    let fields = students.map(student => student.field);
-    let uniqueFields = new Set(fields);
-    let studentsByField = {};
-    for (let field of uniqueFields) {
-      studentsByField[field] = [];
-    }
-    for (let student of students) {
-        studentsByField[student.field].push(student.firstName);
-    }
-    console.log(studentsByField);
-    return studentsByField;
-}
+        for (const line of lines.slice(1)) {
+          const studentRecord = line.split(',');
+          const studentPropValues = studentRecord.slice(0, studentRecord.length - 1);
+          const field = studentRecord[studentRecord.length - 1];
+          if (!Object.keys(studentGroups).includes(field)) {
+            studentGroups[field] = [];
+          }
+          const studentEntries = studentPropNames
+            .map((propName, idx) => [propName, studentPropValues[idx]]);
+          studentGroups[field].push(Object.fromEntries(studentEntries));
+        }
+        resolve(studentGroups);
+      }
+    });
+  }
+});
 
-module.exports = countStudents;
+export default readDatabase;
+module.exports = readDatabase;
