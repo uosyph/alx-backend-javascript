@@ -4,36 +4,30 @@ const app = express();
 const host = '127.0.0.1';
 const port = 1245;
 
-// Define a route for the root endpoint
 app.get('/', (req, res) => {
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/plain');
   res.send('Hello Holberton School!');
 });
 
-// Define a route for the /students endpoint
 app.get('/students', async (req, res) => {
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/plain');
   res.write('This is the list of our students\n');
 
   try {
-    // Retrieve student data asynchronously
     const data = await students(process.argv[2]);
 
-    // Display information about students
     res.write(`Number of students: ${data.students.length}\n`);
     res.write(`Number of students in CS: ${data.csStudents.length}. List: ${data.csStudents.join(', ')}\n`);
     res.write(`Number of students in SWE: ${data.sweStudents.length}. List: ${data.sweStudents.join(', ')}`);
   } catch (err) {
-    // Handle errors if there are any during the asynchronous operation
     res.write(err.message);
   } finally {
     res.end();
   }
 });
 
-// Start the Express app and listen on the specified host and port
 app.listen(port, host, () => {
   console.log(`Server running at http://${host}:${port}`);
 });
