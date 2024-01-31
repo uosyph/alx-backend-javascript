@@ -1,7 +1,7 @@
 const express = require('express');
 const students = require('./3-read_file_async');
 const app = express();
-const host = '127.0.0.1';
+const hostname = '127.0.0.1';
 const port = 1245;
 
 app.get('/', (req, res) => {
@@ -28,6 +28,6 @@ app.get('/students', async (req, res) => {
   }
 });
 
-app.listen(port, host, () => {
-  console.log(`Server running at http://${host}:${port}`);
+app.listen(port, hostname, () => {
+  console.log(`Server running at http://${hostname}:${port}`);
 });
