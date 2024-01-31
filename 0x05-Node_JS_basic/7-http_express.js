@@ -1,42 +1,91 @@
-const fs = require('fs');
 const express = require('express');
-const { argv } = require('process');
-const app = express();
+const fs = require('fs');
 
-app.get('/', (req, res) => {
-  res.set('Content-Type', 'text/plain');
+const app = express();
+const PORT = 1245;
+
+const countStudents = (dataPath) => new Promise((resolve, reject) => {
+  if (!dataPath) {
+    reject(new Error('Cannot load the database'));
+  }
+
+  if (dataPath) {
+    fs.readFile(dataPath, (err, data) => {
+      if (err) {
+        reject(new Error('Cannot load the database'));
+      }
+      if (data) {
+        const reportParts = [];
+        const lines = data.toString('utf-8').trim().split('\n');
+        const studentGroups = {};
+        const fieldNames = lines[0].split(',');
+        const studentPropNames = fieldNames.slice(
+          0,
+          fieldNames.length - 1,
+        );
+
+        for (const line of lines.slice(1)) {
+          const studentRecord = line.split(',');
+          const studentPropValues = studentRecord.slice(
+            0,
+            studentRecord.length - 1,
+          );
+          const field = studentRecord[studentRecord.length - 1];
+          if (!Object.keys(studentGroups).includes(field)) {
+            studentGroups[field] = [];
+          }
+          const studentEntries = studentPropNames.map((propName, idx) => [
+            propName,
+            studentPropValues[idx],
+          ]);
+          studentGroups[field].push(Object.fromEntries(studentEntries));
+        }
+
+        const totalStudents = Object.values(studentGroups).reduce(
+          (pre, cur) => (pre || []).length + cur.length,
+        );
+        reportParts.push(`Number of students: ${totalStudents}`);
+        for (const [field, group] of Object.entries(studentGroups)) {
+          reportParts.push([
+            `Number of students in ${field}: ${group.length}.`,
+            'List:',
+            group.map((student) => student.firstname).join(', '),
+          ].join(' '));
+        }
+        resolve(reportParts.join('\n'));
+      }
+    });
+  }
+});
+
+app.get('/', (_, res) => {
   res.send('Hello Holberton School!');
 });
 
-app.get('/students', (req, res) => {
-  res.set('Content-Type', 'text/plain');
-  res.write('This is the list of our students\n');
-  fs.readFile(argv[2], 'utf8', (err, data) => {
-    if (err) {
-      throw Error('Cannot load the database');
-    }
-    const studentList = [];
-    data.split('\n').forEach((data) => {
-      studentList.push(data.split(','));
+app.get('/students', (_, res) => {
+  const responseParts = ['This is the list of our students'];
+
+  countStudents(process.argv.length > 2 ? process.argv[2] : '')
+    .then((report) => {
+      responseParts.push(report);
+      const responseText = responseParts.join('\n');
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Length', responseText.length);
+      res.statusCode = 200;
+      res.write(Buffer.from(responseText));
+    })
+    .catch((err) => {
+      responseParts.push(err instanceof Error ? err.message : err.toString());
+      const responseText = responseParts.join('\n');
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Length', responseText.length);
+      res.statusCode = 200;
+      res.write(Buffer.from(responseText));
     });
-    studentList.shift();
-    const simplifiedList = [];
-    studentList.forEach((data) => simplifiedList.push([data[0], data[3]]));
-
-    const uniqueFields = new Set();
-    simplifiedList.forEach((item) => uniqueFields.add(item[1]));
-
-    const fieldCounts = {};
-    uniqueFields.forEach((data) => { (fieldCounts[data] = 0); });
-    simplifiedList.forEach((data) => { (fieldCounts[data[1]] += 1); });
-
-    res.write(`Number of students: ${studentList.filter((check) => check.length > 3).length}\n`);
-    Object.keys(fieldCounts).forEach((data) => res.write(`Number of students in ${data}: ${fieldCounts[data]}. List: ${simplifiedList.filter((n) => n[1] === data).map((n) => n[0]).join(', ')}\n`));
-
-    res.end();
-  });
 });
 
-app.listen(1245);
+app.listen(PORT, () => {
+  console.log(`Server listening on PORT ${PORT}`);
+});
 
 module.exports = app;

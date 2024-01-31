@@ -1,61 +1,113 @@
 const http = require('http');
 const fs = require('fs');
-const { argv } = require('process');
 
-function countStudents(path, stream) {
-  if (fs.existsSync(path)) {
-    const data = fs.readFileSync(path, 'utf8');
-    const studentData = [];
-    data.split('\n').forEach((data) => {
-      studentData.push(data.split(','));
-    });
-    studentData.shift();
+const PORT = 1245;
+const HOST = 'localhost';
+const app = http.createServer();
 
-    const simplifiedData = [];
-    studentData.forEach((data) => simplifiedData.push([data[0], data[3]]));
-
-    const uniqueFields = new Set();
-    simplifiedData.forEach((item) => uniqueFields.add(item[1]));
-
-    const fieldCounts = {};
-    uniqueFields.forEach((data) => { (fieldCounts[data] = 0); });
-    simplifiedData.forEach((data) => { (fieldCounts[data[1]] += 1); });
-    stream.write(`Number of students: ${studentData.length}\n`);
-
-    const temp = [];
-    Object.keys(fieldCounts).forEach((data) => temp.push(`Number of students in ${data}: ${fieldCounts[data]}. List: ${simplifiedData.filter((n) => n[1] === data).map((n) => n[0]).join(', ')}\n`));
-    // eslint-disable-next-line no-plusplus
-    for (let i = 0; i < temp.length; i++) {
-      if (i === temp.length - 1) {
-        temp[i] = temp[i].replace(/(\r\n|\n|\r)/gm, '');
-      }
-      stream.write(temp[i]);
-    }
-  } else { throw new Error('Cannot load the database'); }
-}
-
-const hostname = 'localhost';
-const port = 1245;
-
-const app = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  const { url } = req;
-  if (url === '/') {
-    res.write('Hello Holberton School!');
-    res.end();
+const countStudents = (dataPath) => new Promise((resolve, reject) => {
+  if (!dataPath) {
+    reject(new Error('Cannot load the database'));
   }
-  if (url === '/students') {
-    res.write('This is the list of our students\n');
-    try {
-      countStudents(argv[2], res);
-      res.end();
-    } catch (err) {
-      res.end(err.message);
+
+  if (dataPath) {
+    fs.readFile(dataPath, (err, data) => {
+      if (err) {
+        reject(new Error('Cannot load the database'));
+      }
+      if (data) {
+        const reportParts = [];
+        const lines = data.toString('utf-8').trim().split('\n');
+        const studentGroups = {};
+        const fieldNames = lines[0].split(',');
+        const studentPropNames = fieldNames.slice(
+          0,
+          fieldNames.length - 1,
+        );
+
+        for (const line of lines.slice(1)) {
+          const studentRecord = line.split(',');
+          const studentPropValues = studentRecord.slice(
+            0,
+            studentRecord.length - 1,
+          );
+          const field = studentRecord[studentRecord.length - 1];
+          if (!Object.keys(studentGroups).includes(field)) {
+            studentGroups[field] = [];
+          }
+          const studentEntries = studentPropNames.map((propName, idx) => [
+            propName,
+            studentPropValues[idx],
+          ]);
+          studentGroups[field].push(Object.fromEntries(studentEntries));
+        }
+
+        const totalStudents = Object.values(studentGroups).reduce(
+          (pre, cur) => (pre || []).length + cur.length,
+        );
+        reportParts.push(`Number of students: ${totalStudents}`);
+        for (const [field, group] of Object.entries(studentGroups)) {
+          reportParts.push([
+            `Number of students in ${field}: ${group.length}.`,
+            'List:',
+            group.map((student) => student.firstname).join(', '),
+          ].join(' '));
+        }
+        resolve(reportParts.join('\n'));
+      }
+    });
+  }
+});
+
+const serverRouteHandler = [
+  {
+    route: '/',
+    handler(_, res) {
+      const responseText = 'Hello Holberton School!';
+
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Length', responseText.length);
+      res.statusCode = 200;
+      res.write(Buffer.from(responseText));
+    },
+  },
+  {
+    route: '/students',
+    handler(_, res) {
+      const responseParts = ['This is the list of our students'];
+
+      countStudents(process.argv.length > 2 ? process.argv[2] : '')
+        .then((report) => {
+          responseParts.push(report);
+          const responseText = responseParts.join('\n');
+          res.setHeader('Content-Type', 'text/plain');
+          res.setHeader('Content-Length', responseText.length);
+          res.statusCode = 200;
+          res.write(Buffer.from(responseText));
+        })
+        .catch((err) => {
+          responseParts.push(err instanceof Error ? err.message : err.toString());
+          const responseText = responseParts.join('\n');
+          res.setHeader('Content-Type', 'text/plain');
+          res.setHeader('Content-Length', responseText.length);
+          res.statusCode = 200;
+          res.write(Buffer.from(responseText));
+        });
+    },
+  },
+];
+
+app.on('request', (req, res) => {
+  for (const routeHandler of serverRouteHandler) {
+    if (routeHandler.route === req.url) {
+      routeHandler.handler(req, res);
+      break;
     }
   }
 });
 
-app.listen(port, hostname);
+app.listen(PORT, HOST, () => {
+  process.stdout.write(`Server listening at -> http://${HOST}:${PORT}\n`);
+});
 
 module.exports = app;
