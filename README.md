@@ -4,7 +4,7 @@
   </a>
 </p>
 
-# ALX Backend JavaScript - ES6, Node.js, and TypeScript
+# ALX Backend JavaScript - ES6, Node.js, and TypeScript.
 
 This repository contains a collection of projects developed during the ALX Backend Specialization Program, focusing on modern JavaScript (ES6), Node.js, and TypeScript.
 These projects cover essential backend development concepts and practices using JavaScript.
