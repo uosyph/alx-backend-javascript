@@ -13,7 +13,6 @@ These projects cover essential backend development concepts and practices using 
 
 The ALX Backend JavaScript repository is part of the ALX Backend Specialization Program, designed to provide hands-on experience with JavaScript in a backend context.
 It covers key topics such as ES6 features, asynchronous programming with promises, class-based programming, data manipulation, TypeScript, and basic Node.js concepts.
-Projects
 
 ## Projects
 
